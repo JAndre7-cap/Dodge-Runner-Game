@@ -1,0 +1,134 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #333;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+}
+
+#game-container {
+    position: relative;
+    width: 400px;
+    height: 600px;
+    background-color: #87CEEB; /* Default Day */
+    border: 4px solid #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    pointer-events: none;
+}
+
+#powerup-status {
+    position: absolute;
+    top: 30px;
+    right: 0;
+    font-size: 0.8em;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+    z-index: 10;
+}
+
+.hidden {
+    display: none;
+}
+
+h1 {
+    margin-bottom: 20px;
+    font-size: 2.5em;
+    color: #FFD700;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 1.2em;
+    background: #FF4500;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: transform 0.1s;
+}
+
+button:hover {
+    background: #FF6347;
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+.theme-selector {
+    margin: 15px 0;
+}
+
+select {
+    padding: 5px;
+    border-radius: 4px;
+}
+
+#leaderboard-container {
+    margin: 20px 0;
+    width: 100%;
+}
+
+#leaderboard-list {
+    list-style: none;
+    padding: 0;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+#leaderboard-list li {
+    background: rgba(255, 255, 255, 0.1);
+    margin: 5px 0;
+    padding: 5px;
+    border-radius: 3px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Theme Styles */
+.theme-day #game-container { background-color: #87CEEB; }
+.theme-night #game-container { background-color: #191970; }
+.theme-space #game-container { background-color: #000000; }
+.theme-underwater #game-container { background-color: #00008B; }
