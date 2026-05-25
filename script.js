@@ -5,11 +5,20 @@ const levelElement = document.getElementById('level');
 const finalScoreElement = document.getElementById('final-score');
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
+const pauseScreen = document.getElementById('pause-screen');
 const startBtn = document.getElementById('start-btn');
 const restartBtn = document.getElementById('restart-btn');
+const pauseBtn = document.getElementById('pause-btn');
+const resumeBtn = document.getElementById('resume-btn');
 const themeSelect = document.getElementById('theme-select');
 const leaderboardList = document.getElementById('leaderboard-list');
 const powerupStatus = document.getElementById('powerup-status');
+const mobileControls = document.getElementById('mobile-controls');
+const leftZone = document.getElementById('left-zone');
+const rightZone = document.getElementById('right-zone');
+
+// Detect if device is mobile
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 // Audio Context for Procedural Sounds
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -37,12 +46,28 @@ const sounds = {
     levelUp: () => playSound(800, 'square', 0.4)
 };
 
-// Set canvas size
-canvas.width = 400;
-canvas.height = 600;
+// Set canvas size - responsive for mobile
+function resizeCanvas() {
+    const container = document.getElementById('game-container');
+    if (window.innerWidth <= 768) {
+        // Mobile: full screen
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    } else {
+        // Desktop: fixed size
+        canvas.width = 400;
+        canvas.height = 600;
+    }
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // Game State
 let gameActive = false;
+let gamePaused = false;
+let pausedAt = 0;      // timestamp when pause began
+let pauseOffset = 0;   // total ms spent paused
 let score = 0;
 let level = 1;
 let startTime;
@@ -50,6 +75,7 @@ let obstacles = [];
 let powerups = [];
 let keys = {};
 let activePowerup = null; // { type: 'shield', endTime: timestamp }
+let touchMovement = { left: false, right: false }; // For mobile touch controls
 
 // Constants
 const PLAYER_SIZE = 40;
@@ -75,24 +101,70 @@ const POWERUP_TYPES = [
     { type: 'double', color: '#FF00FF', duration: 10000, label: '2️⃣x Points' }
 ];
 
-// Event Listeners
-window.addEventListener('keydown', e => keys[e.key] = true);
+// Event Listeners - Keyboard
+window.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+        if (gameActive && !gamePaused) pauseGame();
+        else if (gamePaused) resumeGame();
+    }
+});
 window.addEventListener('keyup', e => keys[e.key] = false);
 
 startBtn.addEventListener('click', startGame);
 restartBtn.addEventListener('click', startGame);
+pauseBtn.addEventListener('click', pauseGame);
+resumeBtn.addEventListener('click', resumeGame);
 themeSelect.addEventListener('change', (e) => {
     document.body.className = 'theme-' + e.target.value;
 });
 
+// Event Listeners - Touch Controls
+if (isMobile || window.innerWidth <= 768) {
+    mobileControls.classList.remove('hidden');
+    
+    // Left zone
+    leftZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        touchMovement.left = true;
+        leftZone.classList.add('active');
+    });
+    leftZone.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        touchMovement.left = false;
+        leftZone.classList.remove('active');
+    });
+    
+    // Right zone
+    rightZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        touchMovement.right = true;
+        rightZone.classList.add('active');
+    });
+    rightZone.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        touchMovement.right = false;
+        rightZone.classList.remove('active');
+    });
+    
+    // Prevent default touch behaviors
+    document.addEventListener('touchmove', (e) => {
+        if (gameActive) e.preventDefault();
+    }, { passive: false });
+}
+
 function startGame() {
     gameActive = true;
+    gamePaused = false;
+    pauseOffset = 0;
+    pausedAt = 0;
     score = 0;
     level = 1;
     startTime = Date.now();
     obstacles = [];
     powerups = [];
     activePowerup = null;
+    touchMovement = { left: false, right: false };
     player.x = canvas.width / 2 - PLAYER_SIZE / 2;
     
     scoreElement.innerText = '0';
@@ -101,12 +173,40 @@ function startGame() {
     
     startScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
+    pauseScreen.classList.add('hidden');
+    pauseBtn.classList.remove('hidden');
+    updateMobileControls();
     
+    requestAnimationFrame(gameLoop);
+}
+
+function pauseGame() {
+    if (!gameActive || gamePaused) return;
+    gamePaused = true;
+    pausedAt = Date.now();
+    pauseScreen.classList.remove('hidden');
+    pauseBtn.textContent = '▶';
+}
+
+function resumeGame() {
+    if (!gamePaused) return;
+    gamePaused = false;
+    // Shift all time-sensitive references forward by how long we were paused
+    const elapsed = Date.now() - pausedAt;
+    pauseOffset += elapsed;
+    startTime += elapsed;
+    if (activePowerup) activePowerup.endTime += elapsed;
+    pauseScreen.classList.add('hidden');
+    pauseBtn.textContent = '⏸';
     requestAnimationFrame(gameLoop);
 }
 
 function gameOver() {
     gameActive = false;
+    gamePaused = false;
+    touchMovement = { left: false, right: false };
+    pauseBtn.classList.add('hidden');
+    updateMobileControls();
     finalScoreElement.innerText = Math.floor(score);
     saveHighScore(Math.floor(score));
     displayLeaderboard();
@@ -114,7 +214,7 @@ function gameOver() {
 }
 
 function gameLoop() {
-    if (!gameActive) return;
+    if (!gameActive || gamePaused) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -143,11 +243,11 @@ function update() {
         powerupStatus.innerText = '';
     }
 
-    // Player Movement
-    if ((keys['ArrowLeft'] || keys['a'] || keys['A']) && player.x > 0) {
+    // Player Movement - Keyboard and Touch
+    if ((keys['ArrowLeft'] || keys['a'] || keys['A'] || touchMovement.left) && player.x > 0) {
         player.x -= PLAYER_SPEED;
     }
-    if ((keys['ArrowRight'] || keys['d'] || keys['D']) && player.x < canvas.width - player.width) {
+    if ((keys['ArrowRight'] || keys['d'] || keys['D'] || touchMovement.right) && player.x < canvas.width - player.width) {
         player.x += PLAYER_SPEED;
     }
 
@@ -218,7 +318,7 @@ function update() {
 }
 
 function draw() {
-    // Draw Player
+    // Draw Player with scaling for responsive canvas
     ctx.fillStyle = player.color;
     if (activePowerup && activePowerup.type === 'shield') {
         ctx.strokeStyle = '#00BFFF';
@@ -226,6 +326,14 @@ function draw() {
         ctx.strokeRect(player.x - 5, player.y - 5, player.width + 10, player.height + 10);
     }
     ctx.fillRect(player.x, player.y, player.width, player.height);
+    
+    // Draw instruction text on mobile
+    if (isMobile && !gameActive) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Tap left or right to move', canvas.width / 2, 50);
+    }
 
     // Draw Obstacles
     ctx.fillStyle = '#FF4500';
@@ -249,6 +357,15 @@ function rectIntersect(r1, r2) {
              r2.y + r2.height < r1.y);
 }
 
+// Update mobile controls visibility based on game state
+function updateMobileControls() {
+    if (gameActive && !gamePaused && (isMobile || window.innerWidth <= 768)) {
+        mobileControls.classList.remove('hidden');
+    } else if (!gameActive) {
+        mobileControls.classList.add('hidden');
+    }
+}
+
 // Leaderboard Logic
 function saveHighScore(score) {
     let scores = JSON.parse(localStorage.getItem('dodgeRunnerScores') || '[]');
@@ -262,3 +379,11 @@ function displayLeaderboard() {
     let scores = JSON.parse(localStorage.getItem('dodgeRunnerScores') || '[]');
     leaderboardList.innerHTML = scores.map(s => `<li><span>${s.date}</span> <span>${s.score}</span></li>`).join('');
 }
+
+// Initialize mobile controls on page load
+window.addEventListener('load', () => {
+    resizeCanvas();
+    if (isMobile || window.innerWidth <= 768) {
+        mobileControls.classList.remove('hidden');
+    }
+});
