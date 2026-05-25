@@ -2,9 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Dodge Runner</title>
-    <link rel="stylesheet" href="./style.css">
+    <link rel="icon" href="./favicon.svg">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            #game-container {
+                width: 100vw;
+                height: 100vh;
+                max-width: 100%;
+                border-radius: 0;
+                border: none;
+            }
+        }
+    </style>
 </head>
 <body class="theme-day">
     <div id="game-container">
@@ -15,6 +33,14 @@
             <div id="score-container">Score: <span id="score">0</span></div>
             <div id="level-container">Level: <span id="level">1</span></div>
             <div id="powerup-status"></div>
+            <button id="pause-btn" class="hidden">⏸</button>
+        </div>
+
+        <!-- Pause Screen -->
+        <div id="pause-screen" class="overlay hidden">
+            <h1>Paused</h1>
+            <p>Game is paused</p>
+            <button id="resume-btn">▶ Resume</button>
         </div>
 
         <!-- Start Screen -->
@@ -43,7 +69,13 @@
             </div>
             <button id="restart-btn">Play Again</button>
         </div>
+
+        <!-- Mobile Touch Controls -->
+        <div id="mobile-controls" class="mobile-controls hidden">
+            <div class="touch-zone left-zone" id="left-zone"></div>
+            <div class="touch-zone right-zone" id="right-zone"></div>
+        </div>
     </div>
-    <script src="./script.js"></script>
+    <script src="script.js" defer></script>
 </body>
 </html>
