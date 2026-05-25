@@ -168,6 +168,8 @@ select {
     cursor: pointer;
     margin-top: 0;
     line-height: 1.4;
+    pointer-events: auto;  /* override parent #hud pointer-events: none */
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Theme Styles */
