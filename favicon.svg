@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Sky background -->
+  <rect width="32" height="32" rx="4" fill="#87CEEB"/>
+  <!-- Ground -->
+  <rect x="0" y="24" width="32" height="8" rx="0" fill="#5DA832"/>
+  <!-- Player (green square) -->
+  <rect x="6" y="14" width="8" height="8" rx="1" fill="#32CD32"/>
+  <!-- Obstacle (red block falling) -->
+  <rect x="20" y="8" width="7" height="10" rx="1" fill="#FF4500"/>
+  <!-- Motion hint: small shadow under player -->
+  <ellipse cx="10" cy="23.5" rx="4" ry="1" fill="rgba(0,0,0,0.15)"/>
+</svg>
