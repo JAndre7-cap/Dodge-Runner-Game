@@ -1,3 +1,26 @@
+// Game State - Initialize first before any code that uses these variables
+let gameActive = false;
+let gamePaused = false;
+let pausedAt = 0;      // timestamp when pause began
+let pauseOffset = 0;   // total ms spent paused
+let score = 0;
+let level = 1;
+let startTime;
+let obstacles = [];
+let powerups = [];
+let keys = {};
+let activePowerup = null; // { type: 'shield', endTime: timestamp }
+let touchMovement = { left: false, right: false }; // For mobile touch controls
+
+// Constants
+const PLAYER_SIZE = 40;
+const OBSTACLE_SIZE = 30;
+const POWERUP_SIZE = 25;
+const PLAYER_SPEED = 7;
+const INITIAL_FALL_SPEED = 3;
+const LEVEL_INTERVAL = 30000; // 30 seconds
+
+// Get DOM elements
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('score');
@@ -61,31 +84,6 @@ function resizeCanvas() {
     player.y = canvas.height - PLAYER_SIZE - 20;
 }
 
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-// Game State
-let gameActive = false;
-let gamePaused = false;
-let pausedAt = 0;      // timestamp when pause began
-let pauseOffset = 0;   // total ms spent paused
-let score = 0;
-let level = 1;
-let startTime;
-let obstacles = [];
-let powerups = [];
-let keys = {};
-let activePowerup = null; // { type: 'shield', endTime: timestamp }
-let touchMovement = { left: false, right: false }; // For mobile touch controls
-
-// Constants
-const PLAYER_SIZE = 40;
-const OBSTACLE_SIZE = 30;
-const POWERUP_SIZE = 25;
-const PLAYER_SPEED = 7;
-const INITIAL_FALL_SPEED = 3;
-const LEVEL_INTERVAL = 30000; // 30 seconds
-
 // Player Object
 const player = {
     x: canvas.width / 2 - PLAYER_SIZE / 2,
@@ -101,58 +99,6 @@ const POWERUP_TYPES = [
     { type: 'slowmo', color: '#FFD700', duration: 7000, label: '⏳ Slow Mo' },
     { type: 'double', color: '#FF00FF', duration: 10000, label: '2️⃣x Points' }
 ];
-
-// Event Listeners - Keyboard
-window.addEventListener('keydown', e => {
-    keys[e.key] = true;
-    if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
-        if (gameActive && !gamePaused) pauseGame();
-        else if (gamePaused) resumeGame();
-    }
-});
-window.addEventListener('keyup', e => keys[e.key] = false);
-
-startBtn.addEventListener('click', startGame);
-restartBtn.addEventListener('click', startGame);
-pauseBtn.addEventListener('click', pauseGame);
-resumeBtn.addEventListener('click', resumeGame);
-themeSelect.addEventListener('change', (e) => {
-    document.body.className = 'theme-' + e.target.value;
-});
-
-// Event Listeners - Touch Controls
-if (isMobile || window.innerWidth <= 768) {
-    mobileControls.classList.remove('hidden');
-    
-    // Left zone
-    leftZone.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        touchMovement.left = true;
-        leftZone.classList.add('active');
-    });
-    leftZone.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        touchMovement.left = false;
-        leftZone.classList.remove('active');
-    });
-    
-    // Right zone
-    rightZone.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        touchMovement.right = true;
-        rightZone.classList.add('active');
-    });
-    rightZone.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        touchMovement.right = false;
-        rightZone.classList.remove('active');
-    });
-    
-    // Prevent default touch behaviors
-    document.addEventListener('touchmove', (e) => {
-        if (gameActive) e.preventDefault();
-    }, { passive: false });
-}
 
 function startGame() {
     gameActive = true;
@@ -382,10 +328,77 @@ function displayLeaderboard() {
     leaderboardList.innerHTML = scores.map(s => `<li><span>${s.date}</span> <span>${s.score}</span></li>`).join('');
 }
 
-// Initialize mobile controls on page load
-window.addEventListener('load', () => {
+// Initialize the game
+function initializeGame() {
     resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Event Listeners - Keyboard
+    window.addEventListener('keydown', e => {
+        keys[e.key] = true;
+        if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+            if (gameActive && !gamePaused) pauseGame();
+            else if (gamePaused) resumeGame();
+        }
+    });
+    window.addEventListener('keyup', e => keys[e.key] = false);
+
+    // Event Listeners - Buttons
+    if (startBtn) startBtn.addEventListener('click', startGame);
+    if (restartBtn) restartBtn.addEventListener('click', startGame);
+    if (pauseBtn) pauseBtn.addEventListener('click', pauseGame);
+    if (resumeBtn) resumeBtn.addEventListener('click', resumeGame);
+    if (themeSelect) themeSelect.addEventListener('change', (e) => {
+        document.body.className = 'theme-' + e.target.value;
+    });
+
+    // Event Listeners - Touch Controls
     if (isMobile || window.innerWidth <= 768) {
-        mobileControls.classList.remove('hidden');
+        if (mobileControls) mobileControls.classList.remove('hidden');
+        
+        // Left zone
+        if (leftZone) {
+            leftZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchMovement.left = true;
+                leftZone.classList.add('active');
+            });
+            leftZone.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchMovement.left = false;
+                leftZone.classList.remove('active');
+            });
+        }
+        
+        // Right zone
+        if (rightZone) {
+            rightZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchMovement.right = true;
+                rightZone.classList.add('active');
+            });
+            rightZone.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchMovement.right = false;
+                rightZone.classList.remove('active');
+            });
+        }
+        
+        // Prevent default touch behaviors
+        document.addEventListener('touchmove', (e) => {
+            if (gameActive) e.preventDefault();
+        }, { passive: false });
     }
-});
+
+    // Ensure start screen is visible on load
+    if (startScreen) {
+        startScreen.classList.remove('hidden');
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeGame);
+} else {
+    initializeGame();
+}
